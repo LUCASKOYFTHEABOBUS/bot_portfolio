@@ -1,0 +1,155 @@
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, Table
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+
+# Создание базового класса для наших таблиц
+Base = declarative_base()
+
+# Таблица для хранения информации о проектах
+class Project(Base):
+    __tablename__ = 'projects'
+    
+    project_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False)
+    project_name = Column(String, nullable=False)
+    description = Column(Text)
+    url = Column(String)
+    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=False)
+
+    status = relationship("Status", back_populates="projects")
+    skills = relationship("ProjectSkill", back_populates="project")
+
+# Таблица для хранения информации о статусах
+class Status(Base):
+    __tablename__ = 'status'
+    
+    status_id = Column(Integer, primary_key=True, autoincrement=True)
+    status_name = Column(String, nullable=False)
+
+    projects = relationship("Project", back_populates="status")
+
+# Таблица с различными навыками
+class Skill(Base):
+    __tablename__ = 'skills'
+    
+    skill_id = Column(Integer, primary_key=True, autoincrement=True)
+    skill_name = Column(String, nullable=False)
+
+    project_skills = relationship("ProjectSkill", back_populates="skill")
+
+# Таблица для связи проектов и навыков
+class ProjectSkill(Base):
+    __tablename__ = 'project_skills'
+    
+    project_skill_id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.project_id'), nullable=False)
+    skill_id = Column(Integer, ForeignKey('skills.skill_id'), nullable=False)
+
+    project = relationship("Project", back_populates="skills")
+    skill = relationship("Skill", back_populates="project_skills")
+
+# Создание подключения к базе данных (например, SQLite)
+engine = create_engine('sqlite:///portfolio_bot.db')
+
+# Создание всех таблиц
+Base.metadata.create_all(engine)
+
+# Создание сессии для работы с базой данных
+Session = sessionmaker(bind=engine)
+session = Session()
+
+# Пример добавления данных в базу данных
+def add_sample_data():
+    # Пример добавления статуса
+    new_status = Status(status_name="In Progress")
+    session.add(new_status)
+    session.commit()
+
+    # Пример добавления навыка
+    new_skill = Skill(skill_name="Python")
+    session.add(new_skill)
+    session.commit()
+
+    # Пример добавления проекта
+    new_project = Project(user_id=1, project_name="My First Project", description="Description of my project", url="http://example.com", status_id=new_status.status_id)
+    session.add(new_project)
+    session.commit()
+
+    # Пример добавления связи проекта и навыка
+    project_skill = ProjectSkill(project_id=new_project.project_id, skill_id=new_skill.skill_id)
+    session.add(project_skill)
+    session.commit()
+
+add_sample_data()
+
+#2
+import sqlite3
+from config import DATABASE
+
+class DatabaseManager:
+    def __init__(self, db_name=DATABASE):
+        self.db_name = db_name
+
+    def create_tables(self):
+        connection = sqlite3.connect(self.db_name)
+        with connection:
+            cursor = connection.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS status (
+                    status_id INTEGER PRIMARY KEY,
+                    status_name TEXT NOT NULL
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS skills (
+                    skill_id INTEGER PRIMARY KEY,
+                    skill_name TEXT NOT NULL
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS projects (
+                    project_id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    project_name TEXT NOT NULL,
+                    description TEXT,
+                    url TEXT,
+                    status_id INTEGER,
+                    FOREIGN KEY (status_id) REFERENCES status (status_id)
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS project_skills (
+                    project_skill_id INTEGER PRIMARY KEY,
+                    project_id INTEGER NOT NULL,
+                    skill_id INTEGER NOT NULL,
+                    FOREIGN KEY (project_id) REFERENCES projects (project_id),
+                    FOREIGN KEY (skill_id) REFERENCES skills (skill_id)
+                )
+            ''')
+            connection.commit()
+
+# Запуск создания таблиц при прямом запуске файла
+if __name__ == '__main__':
+    manager = DatabaseManager(DATABASE)
+    manager.create_tables()
+    print("Таблицы успешно созданы")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
